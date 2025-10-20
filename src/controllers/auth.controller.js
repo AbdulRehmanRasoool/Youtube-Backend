@@ -48,8 +48,8 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { userName, email, password } = req.body;
-        if (!userName && !email) {
+        const { email, password } = req.body;
+        if (!email) {
             return res.status(400).json(new ApiResponse(false, 400, "Username or email is required"));
         }
 
@@ -58,14 +58,14 @@ const login = async (req, res) => {
         }
         let user = null;
         user = await User.findOne({
-            $or: [{userName}, {email}]
+            $or: [{userName: email}, {email}]
         });
 
         if (!user) {
             return res.status(400).json(new ApiResponse(false, 400, "Invalid user credentials"))
         }
 
-        const isPasswordValid = user.validatePassword(password);
+        const isPasswordValid = await user.validatePassword(password);
         if (!isPasswordValid) {
             return res.status(400).json(new ApiResponse(false, 400, "Invalid user credentials"));
         }

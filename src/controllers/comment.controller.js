@@ -80,3 +80,25 @@ const updateComment = async (req, res) => {
         return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
     }
 }
+
+const deleteComment = async (req, res) => {
+    try {
+        const commentId = req.params;
+        if (!commentId) {
+            return res.status(400).json(new ApiResponse(false, 400, "Comment id is required"));
+        }
+
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
+            return res.status(400).json(new ApiResponse(false, 400, "Invalid comment id"));
+        }
+
+        await Comment.deleteOne({
+            _id: commentId
+        });
+        return res.status(200).json(new ApiResponse(true, 200, "Comment deleted successfully"));
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
+    }
+}

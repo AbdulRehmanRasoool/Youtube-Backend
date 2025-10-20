@@ -28,15 +28,19 @@ const fileUpload = async (filePath) => {
 
 const fileRemove = async (filePath) => {
     try {
-        
-        const response = await cloudinary.uploader.destroy(filePath);
-        fs.unlinkSync(filePath);
+        const publicId = await extractPublicId(filePath);
+        const response = await cloudinary.uploader.destroy(publicId);
         return response;
     } catch (error) {
-        fs.unlinkSync(filePath);
         console.error("Cloudinary file upload error", error);
         throw error;
     }
+}
+
+const extractPublicId = async (fileUrl) => {
+    const parts = fileUrl.split('/');
+    const uploadIndex = parts.findIndex(x => x === "upload");
+    return parts.slice(uploadIndex + 2)[0].replace(/\.[^/.]+$/, "");
 }
 
 export { fileUpload, fileRemove }
