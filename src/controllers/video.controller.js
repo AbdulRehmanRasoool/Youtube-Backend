@@ -56,13 +56,32 @@ const publishVideo = async (req, res) => {
 
 const getVideo = async (req, res) => {
     const { videoId } = req.params;
-    const video = await Video.findById(videoId);
-
-    if (!video) {
-        return res.status(400).json(new ApiResponse(false, 400, "Invalid video id"));
+    if (!videoId) {
+        return res.status(400).json(new ApiResponse(false, 400, "Video id is required"));
     }
 
-    
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id: videoId
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "owner",
+                as: "channel"
+            }
+        },
+        {
+            $lookup: {
+                from: "comments",
+                foreignField: "_id",
+                
+            }
+        }
+    ])
 }
 
 export { getVideos, publishVideo }

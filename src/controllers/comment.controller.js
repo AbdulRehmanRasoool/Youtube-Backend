@@ -1,0 +1,82 @@
+import { ApiResponse } from "../utils/ApiResponse";
+import { Comment } from "../models/comment.model.js";
+
+const getComments = async (req, res) => {
+    try {
+        const { videoId } = req.params;
+        if (!videoId) {
+            return res.status(400).json(new ApiResponse(false, 400, "Video id is required"));
+        }
+
+        const comments = await Comment.aggregate([
+            {
+                $match: {
+                    video: videoId
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "owner",
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $project: {
+                               fullName: 1,
+                               userName: 1,
+                               avatar: 1 
+                            }
+                        }
+                    ]
+                },
+                $project: {
+                    
+                }
+            }
+        ])
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
+    }
+}
+
+const createComment = async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json(new ApiResponse(false, 400, "Content is required"));
+        }
+
+        const loggedInUser = req.user;
+        const comment = await Comment.create({
+            content,
+            owner: loggedInUser._id
+        });
+        return res.status(200).json(new ApiResponse(true, 200, "Comment created successfully", comment));
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"))
+    }
+}
+
+const updateComment = async (req, res) => {
+    try {
+        const { content } = req.body;
+        const commentId = req.params;
+
+        if (!content || !commentId) {
+            return res.status(400).json(new ApiResponse(false, 400, "All fields are required"));
+        }
+
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
+            return res.status(false, 400, "Invalid comment id");
+        }
+
+        return res.status(200).json(new ApiResponse(true, 200, "Comment id get successfully", comment));
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
+    }
+}
