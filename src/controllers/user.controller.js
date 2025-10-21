@@ -102,7 +102,6 @@ const updateUserCover = async (req, res) => {
     }
 }
 
-
 const sanitizeUserResponse = async (user) => {
     const { password, refreshToken, __v, ...rest } = user.toObject();
     return rest;
