@@ -11,7 +11,7 @@ const getComments = async (req, res) => {
         const comments = await Comment.aggregate([
             {
                 $match: {
-                    video: videoId
+                    videoId: videoId
                 }
             },
             {
@@ -23,18 +23,33 @@ const getComments = async (req, res) => {
                     pipeline: [
                         {
                             $project: {
-                               fullName: 1,
-                               userName: 1,
-                               avatar: 1 
+                                fullName: 1,
+                                email: 1,
+                                userName: 1,
+                                avatar: 1
                             }
                         }
                     ]
-                },
+                }
+            },
+            {
+                $addFields: {
+                    owner: {
+                        $arrayElemAt: ["$owner", 0]
+                    }
+                }
+            },
+            {
                 $project: {
-                    
+                    _id: 1,
+                    content: 1,
+                    video: 1,
+                    owner: 1
                 }
             }
-        ])
+        ]);
+
+        return res.status(200).json(new ApiResponse(true, 200, "Comments get successfully", comments));
     } catch (error) {
         console.error(error);
         return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
@@ -44,6 +59,11 @@ const getComments = async (req, res) => {
 const createComment = async (req, res) => {
     try {
         const { content } = req.body;
+        const videoId = req.params.videoId;
+        if (!videoId) {
+            return res.status(400).json(new ApiResponse(false, 400, "Video id is required"));
+        }
+
         if (!content) {
             return res.status(400).json(new ApiResponse(false, 400, "Content is required"));
         }
@@ -51,6 +71,7 @@ const createComment = async (req, res) => {
         const loggedInUser = req.user;
         const comment = await Comment.create({
             content,
+            video: videoId,
             owner: loggedInUser._id
         });
         return res.status(200).json(new ApiResponse(true, 200, "Comment created successfully", comment));
@@ -69,11 +90,15 @@ const updateComment = async (req, res) => {
             return res.status(400).json(new ApiResponse(false, 400, "All fields are required"));
         }
 
-        const comment = await Comment.findById(commentId);
+        const comment = await Comment.findOne({
+            $and: [{_id: commentId}, {owner: req.user._id}]
+        });
         if (!comment) {
             return res.status(false, 400, "Invalid comment id");
         }
 
+        comment.content = content;
+        await comment.save();
         return res.status(200).json(new ApiResponse(true, 200, "Comment id get successfully", comment));
     } catch (error) {
         console.error(error);
@@ -88,7 +113,9 @@ const deleteComment = async (req, res) => {
             return res.status(400).json(new ApiResponse(false, 400, "Comment id is required"));
         }
 
-        const comment = await Comment.findById(commentId);
+        const comment = await Comment.findOne({
+            $and: [{_id: commentId}, {owner: req.user._id}]
+        });
         if (!comment) {
             return res.status(400).json(new ApiResponse(false, 400, "Invalid comment id"));
         }
@@ -102,3 +129,5 @@ const deleteComment = async (req, res) => {
         return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
     }
 }
+
+export { getComments, createComment, updateComment, deleteComment }
