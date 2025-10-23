@@ -16,7 +16,7 @@ router.route("/publishVideo").post(verifyJWT, upload.fields([
     }
 ]), publishVideo);
 router.route("/getVideo/:videoId").get(getVideo);
-router.route("/updateVideo/:videoId").put(verifyJWT, updateVideo);
+router.route("/updateVideo/:videoId").put(verifyJWT, upload.single("thumbnail"), updateVideo);
 router.route("/deleteVideo/:videoId").delete(verifyJWT, deleteVideo);
 router.route("/updateVideoStatus/:videoId").put(verifyJWT, updateVideoStatus);
 

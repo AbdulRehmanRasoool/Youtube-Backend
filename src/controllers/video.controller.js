@@ -6,24 +6,22 @@ import { fileRemove, fileUpload } from "../utils/cloudinary.js";
 const getVideos = async (req, res) => {
     try {
         // TODO: response => thumbnail, title, views, createdAt, duration, avatar, username, email, fullName
-        const pageNumber = req.query.pageNumber;
-        const pageSize = req.query.pageSize;
+        const pageNumber = Number(req.query.pageNumber);
+        const pageSize = Number(req.query.pageSize);
 
         if (!pageNumber || !pageSize) {
             return res.status(400).json(new ApiResponse(false, 400, "All fields are required"));
         }
 
-        console.log(pageNumber);
-        console.log(typeof(pageSize));
-
-        const skip = Number((pageNumber - 1) * pageSize);
-        const limit = Number(pageSize);
         const search = req.query.search;
-        console.log(search);
         const videos = await Video.aggregate([
             {
                 $match: {
-                    title: { $regex: search, $options: "i"}
+                    $and: [
+                        {title: { $regex: search, $options: "i"}},
+                        {isPublished: true}
+                    ]
+                    
                 }
             },
             {
@@ -45,13 +43,31 @@ const getVideos = async (req, res) => {
                 }
             },
             {
-                $skip: skip
+                $addFields: {
+                    channel: {
+                        $arrayElemAt: ["$channel", 0]
+                    }
+                }
             },
             {
-                $limit: limit
+                $project: {
+                    _id: 1,
+                    videoFile: 1,
+                    thumbnail: 1,
+                    title: 1,
+                    description: 1,
+                    createdAt: 1,
+                    channel: 1
+                }
+            },  
+            {
+                $skip: (pageNumber - 1) * pageSize
+            },
+            {
+                $limit: pageSize
             }
         ]);
-        console.log(videos);
+        return res.status(200).json(new ApiResponse(true, 200, "Videos get successfully", videos));
     } catch (error) {
         console.error(error);
         return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
@@ -162,7 +178,7 @@ const updateVideo = async (req, res) => {
     try {
         const { videoId } = req.params;
         if (!videoId) {
-            return res.status(400).json(new ApiResponse(false, 400, "Vidoe id is required"));
+            return res.status(400).json(new ApiResponse(false, 400, "Video id is required"));
         }
 
         const { title, description } = req.body;
