@@ -1,4 +1,3 @@
-import { Like } from "../models/like.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -26,7 +25,12 @@ const getChannelStats = async (req, res) => {
             {
                 $count: "$likes"
             }
-        ])
+        ]);
+        const response = {
+            totalSubscribers,
+            videos
+        };
+        return res.status(200).json(new ApiResponse(true, 200, "User stats get successfully", response));
     } catch (error) {
         console.error(error);
         return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));

@@ -102,6 +102,106 @@ const updateUserCover = async (req, res) => {
     }
 }
 
+const getUserWatchHistory = async (req, res) => {
+    try {
+        const loggedInUser = req.user;
+        const videos = await User.aggregate([
+            {
+                $match: {
+                    _id: loggedInUser._id
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    foreignField: "owner",
+                    localField: "watchHistory",
+                    as: "videos",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "owner",
+                                as: "channel",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            userName: 1,
+                                            email: 1,
+                                            avatar: 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                title: 1,
+                                description: 1,
+                                thumbnail: 1,
+                                videoFile: 1,
+                                duration: 1,
+                                channel: 1
+                            }
+                        },
+                        {
+                            $addFields: {
+                                channel: {
+                                    $arrayElemAt: ["$channel", 0]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+        return res.status(200).json(new ApiResponse(true, 200, "User watch history get successfully", videos));
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "Something went wrong"));
+    }
+}
+
+const getUserChannelProfile = async (req, res) => {
+    try {
+        const { username } = req.params;
+        if (!username) {
+            return res.status(400).json(new ApiResponse(false, 400, "Username is required"));
+        }
+
+        const user = await User.aggregate([
+            {
+                $match: {
+                    userName: username
+                }
+            },
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    foreignField: "channel",
+                    localField: "_id",
+                    as: "subscribers"
+                }
+            },
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    foreignField: "subscriber",
+                    localField: "_id",
+                    as: "subscribedCount"
+                }
+            }
+        ]);
+        return res.status(200).json(new ApiResponse(true, 200, "User profile get successfully", user));
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json(new ApiResponse(false, 500, "An error has occured"));
+    }
+}
+
 const sanitizeUserResponse = async (user) => {
     const { password, refreshToken, __v, ...rest } = user.toObject();
     return rest;
